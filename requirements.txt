@@ -1,0 +1,4 @@
+# Anki's engine (same version Lumen was tested with)
+anki==26.9.4
+# Native window: WebKit on macOS, Edge WebView2 on Windows, GTK/Qt on Linux
+pywebview>=5.3,<6
