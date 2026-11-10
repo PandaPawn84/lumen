@@ -34,7 +34,7 @@ On first run you can:
 
 On your Mac, run `./build_mac_app.sh` in Terminal. It creates `dist/Lumen.app`, which you can drag to Applications.
 
-Releases are built automatically by GitHub Actions (`.github/workflows/release.yml`). To publish a new version, push a tag like `v0.2.0`.
+Releases are built automatically by GitHub Actions (`.github/workflows/release.yml`). To publish a new version, raise `__version__` in `lumen/__init__.py` and push to `main`, or push a tag like `v0.2.0`.
 
 ### Windows and Linux
 
