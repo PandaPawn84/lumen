@@ -1,6 +1,6 @@
 # Lumen
 
-A calm, modern flashcard app for macOS, built on **Anki's engine**.
+A modern flashcard app for macOS, built on **Anki's engine**.
 
 Lumen is a brand-new interface. Underneath, it uses Anki's official, open-source engine (the `anki` Python package), so scheduling, card rendering, search and your review history work the same as in Anki. Lumen opens regular Anki collections and imports `.apkg` decks.
 
