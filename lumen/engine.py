@@ -21,6 +21,7 @@ from typing import Any
 # anki.collection must be imported first (anki's modules import each other).
 from anki.collection import Collection, ImportAnkiPackageOptions, ImportAnkiPackageRequest
 from anki.cards import Card
+from anki.errors import NotFoundError
 from anki.consts import (
     QUEUE_TYPE_DAY_LEARN_RELEARN,
     QUEUE_TYPE_LRN,
@@ -909,6 +910,81 @@ class Engine:
                 note.tags = ["sample"]
                 self.col.add_note(note, did)
             return {"id": did}
+
+    # ------------------------------------------------------------------
+    # Inbox: cards handed over by other apps (see inbox.py, docs/inbox.md)
+    # ------------------------------------------------------------------
+
+    def _inbox_notetype(self, spec: dict) -> dict:
+        """The note type a message asks for, created the first time it's seen.
+
+        An existing type with that name is used as it is, so anything you
+        change about its look in Lumen or Anki is kept.
+        """
+        mm = self.col.models
+        nt = mm.by_name(spec["name"])
+        if nt:
+            return nt
+        nt = mm.new(spec["name"])
+        if spec["kind"] == "cloze":
+            nt["type"] = 1
+        for name in spec["fields"]:
+            mm.add_field(nt, mm.new_field(name))
+        t = mm.new_template("Card 1")
+        t["qfmt"], t["afmt"] = spec["front"], spec["back"]
+        mm.add_template(nt, t)
+        nt["css"] = spec["css"] or LUMEN_CARD_CSS
+        mm.add_dict(nt)
+        return mm.by_name(spec["name"])
+
+    def inbox_apply(self, msg: dict, note_id: int | None) -> tuple[str, int | None]:
+        """Add, update or delete one note. Returns (status, note id)."""
+        with self.lock:
+            if not note_id and msg.get("note_id"):
+                # the sender says this note already exists (made before the inbox did)
+                try:
+                    self.col.get_note(msg["note_id"])
+                    note_id = msg["note_id"]
+                except NotFoundError:
+                    pass
+            if msg["op"] == "delete":
+                if note_id:
+                    try:
+                        self.col.get_note(note_id)
+                        self.col.remove_notes([note_id])
+                    except NotFoundError:
+                        pass
+                return "deleted", None
+
+            note = None
+            if note_id:
+                try:
+                    note = self.col.get_note(note_id)
+                except NotFoundError:
+                    return "gone", None
+            fresh = note is None
+            if fresh:
+                note = self.col.new_note(self._inbox_notetype(msg["notetype"]))
+            names = [f["name"] for f in note.note_type()["flds"]]
+            for name, value in msg["fields"].items():
+                if name in names:
+                    note.fields[names.index(name)] = value
+            state = note.fields_check()
+            if state == 1:
+                raise EngineError("The first field is empty.")
+            if state == 3:
+                raise EngineError("A fill-in-the-blank card needs at least one {{c1::…}}.")
+            if not fresh:
+                self.col.update_note(note)
+                if self.session and self.session.card and self.session.card.nid == note.id:
+                    self.session.card.load()
+                return "updated", note.id
+            note.tags = [t.strip().replace(" ", "_") for t in msg["tags"] if t.strip()]
+            self.col.add_note(note, self.col.decks.id(msg["deck"]))
+            if not note.cards():
+                self.col.remove_notes([note.id])
+                raise EngineError("No cards were made. Check the fields are filled in.")
+            return "added", note.id
 
     # ------------------------------------------------------------------
     # Sync (planned)

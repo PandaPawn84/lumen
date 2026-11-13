@@ -30,6 +30,26 @@ function App() {
     loadBoot();
   }, []);
 
+  // Cards handed over by other apps (the inbox): refresh and say so.
+  useEffect(() => {
+    let seq = null;
+    const check = async () => {
+      try {
+        const n = await api("/api/inbox/news?since=" + (seq ?? 0));
+        if (seq !== null && n.changed) {
+          bump();
+          for (const [source, count] of Object.entries(n.added)) {
+            toast(`${plural(count, "new card")} from ${source[0].toUpperCase() + source.slice(1)}`, { duration: 4000 });
+          }
+        }
+        seq = n.seq;
+      } catch {}
+    };
+    check();
+    const timer = setInterval(check, 4000);
+    return () => clearInterval(timer);
+  }, []);
+
   const openAdd = (deckId) => setAdding({ deckId });
   const startImport = (then) => {
     afterImport.current = then || null;

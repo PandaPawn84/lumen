@@ -21,6 +21,7 @@ from typing import Any, Callable
 
 from . import paths
 from .engine import Engine, EngineError
+from .inbox import Inbox
 
 WEB_DIR = os.path.join(os.path.dirname(__file__), "web")
 MAX_UPLOAD = 1024 * 1024 * 1024  # 1 GB
@@ -36,6 +37,7 @@ class App:
         self.open_error = ""
         path = collection_path or self.settings.get("collection") or paths.default_collection()
         self.open(path, remember=collection_path is None)
+        self.inbox = Inbox(self)
 
     def open(self, path: str, remember: bool = True) -> None:
         if self.engine:
@@ -157,6 +159,10 @@ def _routes(app: App) -> list[tuple[str, str, Callable[..., Any]]]:
         ("GET", r"/api/settings", lambda q, b: e().app_settings()),
         ("POST", r"/api/settings", lambda q, b: e().save_app_settings(b)),
         ("GET", r"/api/sync", lambda q, b: e().sync_status()),
+        # cards from other apps
+        ("GET", r"/api/inbox", lambda q, b: app.inbox.info()),
+        ("POST", r"/api/inbox", lambda q, b: (app.inbox.set_enabled(bool(b["enabled"])), app.inbox.info())[1]),
+        ("GET", r"/api/inbox/news", lambda q, b: app.inbox.news_since(int(q.get("since", 0)))),
     ]
 
 
@@ -284,4 +290,5 @@ def start(app: App, port: int = 0) -> tuple[ThreadingHTTPServer, str]:
     server = ThreadingHTTPServer(("127.0.0.1", port), make_handler(app))
     server.daemon_threads = True
     threading.Thread(target=server.serve_forever, daemon=True).start()
+    app.inbox.start()
     return server, f"http://127.0.0.1:{server.server_address[1]}/"

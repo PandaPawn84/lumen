@@ -1,5 +1,5 @@
 // App settings.
-import { html, useState, useApi, api, bump, toast, toastError, Icon, Switch, Spinner, ask, MOD } from "./lib.js";
+import { html, useState, useApi, api, bump, toast, toastError, Icon, Switch, Spinner, ask, MOD, plural } from "./lib.js";
 
 export function applyTheme(theme) {
   if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
@@ -8,7 +8,16 @@ export function applyTheme(theme) {
 
 export function Settings({ boot, onBoot }) {
   const { data } = useApi("/api/settings");
+  const { data: inbox } = useApi("/api/inbox");
   const [theme, setTheme] = useState(boot.theme || "system");
+  const setInbox = async (on) => {
+    try {
+      await api("/api/inbox", { enabled: on });
+      bump();
+    } catch (e) {
+      toastError(e);
+    }
+  };
 
   const changeTheme = async (t) => {
     setTheme(t);
@@ -101,6 +110,25 @@ export function Settings({ boot, onBoot }) {
       </div>
     </div>
 
+    ${inbox &&
+    html`<div class="panel panel-pad section">
+      <h2 style="margin-bottom:6px">Cards from other apps</h2>
+      <div class="settings-list">
+        <div class="set-row">
+          <div class="s-text"><b>Accept cards from other apps</b><span>Apps on this computer can leave cards in Lumen's inbox folder, and Lumen adds them for you. Turn this off and they wait there untouched.</span></div>
+          <div class="s-ctrl"><${Switch} checked=${inbox.enabled} onChange=${setInbox} label="Accept cards from other apps" /></div>
+        </div>
+        ${Object.entries(inbox.sources).map(
+          ([source, n]) => html`<div class="set-row">
+            <div class="s-text"><b>${source[0].toUpperCase() + source.slice(1)}</b><span>${plural(n, "card")} added so far.</span></div>
+          </div>`
+        )}
+        <div class="set-row">
+          <div class="s-text"><b>Inbox folder</b><span class="selectable" style="word-break:break-all">${inbox.folder}</span></div>
+        </div>
+      </div>
+    </div>`}
+
     <div class="panel panel-pad section">
       <div class="row" style="justify-content:space-between">
         <h2>AnkiWeb sync</h2><span class="badge">Coming soon</span>
@@ -122,6 +150,6 @@ export function Settings({ boot, onBoot }) {
       </dl>
     </div>
 
-    <p class="hint section" style="text-align:center">Lumen 0.1 · built on Anki's open-source engine (AGPL-3.0)</p>
+    <p class="hint section" style="text-align:center">Lumen 0.2 · built on Anki's open-source engine (AGPL-3.0)</p>
   </div>`;
 }

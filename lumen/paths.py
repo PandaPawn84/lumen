@@ -26,6 +26,13 @@ def default_collection() -> str:
     return os.path.join(data_dir(), "collection", "collection.anki2")
 
 
+def inbox_dir() -> str:
+    """Where other apps leave cards for Lumen (see docs/inbox.md)."""
+    path = os.path.join(data_dir(), "inbox")
+    os.makedirs(path, exist_ok=True)
+    return path
+
+
 def settings_file() -> str:
     return os.path.join(data_dir(), "settings.json")
 

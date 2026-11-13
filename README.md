@@ -83,6 +83,12 @@ Lumen keeps its own collection in `~/Library/Application Support/Lumen/collectio
 
 Under **Settings → Your cards**, you can also open your Anki profile *directly*, so both apps share the same cards. If you do, never run both at the same time, and make a backup in Anki first.
 
+## Cards from other apps
+
+Lumen has an inbox folder. Another app on your computer can leave cards there and Lumen adds them for you, whether it's open or not. You can turn this off in **Settings → Cards from other apps**.
+
+If you're writing an app that should send cards to Lumen, see [docs/inbox.md](docs/inbox.md).
+
 ## Not yet included
 
 - **AnkiWeb sync.** The engine supports it, but the sign-in and conflict screens are still to come. The code for it lives in `lumen/engine.py`.
@@ -100,6 +106,7 @@ build_mac_app.sh      builds dist/Lumen.app with PyInstaller
 lumen/
   engine.py           the only file that talks to Anki's engine
   server.py           local HTTP server: 127.0.0.1 only, per-launch secret token
+  inbox.py            the inbox: cards left by other apps (format in docs/inbox.md)
   paths.py            where files live on each OS
   main.py             starts the server and opens the native window (pywebview)
   web/                the interface: Preact + htm, no build step, works offline
